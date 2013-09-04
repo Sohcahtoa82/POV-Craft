@@ -348,7 +348,6 @@ public class Region {
 		}
 	}
 	
-	
 	public void writePOVBlock(int type, int run, PrintWriterGroup pw, int x, int y, int z){
 		switch (type){
 		case 0:  // Air
@@ -398,13 +397,15 @@ public class Region {
 		case 106: // vines 
 			return;
 		default: 
+			if (!BlockType.unimplemented[type]){
+				System.out.printf("Unimplemented block: %d (%s)\n", type, BlockType.getBlockName(type));
+				BlockType.unimplemented[type] = true;
+			}
 			return;
 			//printBox(pw, run);
 			//pw.print("pigment {color rgb 1 } ");
 			//break;
 		}
-				
-		
 	}
 	private void printTranslate(PrintWriterGroup pw, int x, int y, int z, int run) {
 		pw.printf("translate <%d, %d, %d> }\n", x, y, z);
@@ -415,5 +416,4 @@ public class Region {
 	private void printBox(PrintWriterGroup pw, int run){
 		pw.printf("box { 0, <1, %d, 1> ", run);
 	}
-	
 }
