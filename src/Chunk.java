@@ -1,10 +1,6 @@
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
-import java.io.File;
-import java.io.PrintWriter;
-import java.util.LinkedList;
-
 
 public class Chunk {
 	public int offset;

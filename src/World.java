@@ -1,8 +1,6 @@
 
 import java.io.File;
-import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.LinkedList;
 
 public class World {
 	ArrayList<Region> regions = new ArrayList<Region>();
@@ -26,6 +24,7 @@ public class World {
 			pw.printf("#debug \"Region %d\\n\"\n", i);
 			Region region = regions.get(i);
 			blocksWritten = region.writePOVString(pw);
+			blocksWritten += region.writeWaterBlocks(pw);
 			totalBlocks += blocksWritten;
 			System.out.printf("Region %d: %d blocks\n", i, blocksWritten);
 		}

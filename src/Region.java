@@ -3,9 +3,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.Queue;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
@@ -21,6 +19,10 @@ public class Region {
 	
 	private byte[][][] visited = new byte[512][256][512];
 	private LinkedList<Point> queue = new LinkedList<Point>();
+	
+	private static final int NOT_VISITED = 0;
+	private static final int QUEUED = 1;
+	private static final int VISITED = 2;
 	
 	
 	public void readRegionFile(String fileName) throws Exception{
@@ -100,29 +102,22 @@ public class Region {
 		}
 	};
 	
-	@SuppressWarnings("unused")
-	public int writePOVString(PrintWriterGroup pw) {
-		
-		for (int x = 0; x < 512; x++){
-			for (int y = 0; y < 256; y++){
-				for (int z = 0; z < 512; z++){
-					visited[x][y][z] = 0;
-				}
-			}
-		}
+	public int writeWaterBlocks(PrintWriterGroup pw) {
+		visited = new byte[512][256][512];
 
 		int blocksWritten = 0;
 		boolean hasCreatedMesh = false;
+		
+		// TODO: Place a starting point based on camera position instead of trying to add each chunk from the sky
 		for (int x = 0; x < 32; x++) {
 			for (int y = 0; y < 32; y++){
 				if (chunk[x][y] != null){
-					visited[x*16][255][y*16]= 1;
+					visited[x*16][255][y*16] = QUEUED;
 					queue.add(new Point(x*16, 255, y*16));
 				}
 			}
 		}
-		pw.write("union {\n");
-		//pw.water.write("mesh {\n");
+		
 		while (!queue.isEmpty()){
 			//System.out.printf("Queue size: %d\n", queue.size());
 			Point point = queue.poll();
@@ -130,55 +125,93 @@ public class Region {
 			int chunkZ = point.z / 16;
 			if (chunk[chunkX][chunkZ] == null)
 				continue;
+			// TODO: Fix this math.  It doesn't account for distance properly
 			if (Main.useLimit && ((Math.pow(chunk[chunkX][chunkZ].posX - Main.camerax,2) + Math.pow(chunk[chunkX][chunkZ].posZ - Main.cameraz, 2)) > (Main.dist * Main.dist)))
 				continue;
 			int x = point.x;
 			int y = point.y;
 			int z = point.z;
 			int blockType = chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
-			if (visited[point.x][point.y][point.z] == 2 && !typeIsTransparent(blockType))
+			if (visited[x][y][z] == VISITED && !typeIsTransparent(blockType))
+				continue;
+			addNeighbors(x, y, z, blockType);
+			if ((blockType == 8 || blockType == 9) && visited[x][y][z] != VISITED){
+				if (!hasCreatedMesh){
+					pw.water.write("mesh {\n");
+					hasCreatedMesh = true;
+				}
+				addWaterBlock(pw.water, x, y, z);
+				blocksWritten++;
+			}
+		}
+
+		if (hasCreatedMesh)
+			pw.water.printf("hollow translate <%d, -0.2, %d>\n material { waterMaterial } }\n ", this.posX * 512, this.posZ * 512);
+		return blocksWritten;
+	}
+		
+	
+	public int writePOVString(PrintWriterGroup pw) {
+		
+		visited = new byte[512][256][512];
+
+		int blocksWritten = 0;
+		
+		// TODO: Place a starting point based on camera position instead of trying to add each chunk from the sky
+		for (int x = 0; x < 32; x++) {
+			for (int y = 0; y < 32; y++){
+				if (chunk[x][y] != null){
+					visited[x*16][255][y*16] = QUEUED;
+					queue.add(new Point(x*16, 255, y*16));
+				}
+			}
+		}
+		pw.write("union {\n");
+		while (!queue.isEmpty()){
+			//System.out.printf("Queue size: %d\n", queue.size());
+			Point point = queue.poll();
+			int chunkX = point.x / 16;
+			int chunkZ = point.z / 16;
+			if (chunk[chunkX][chunkZ] == null)
+				continue;
+			// TODO: Fix this math.  It doesn't account for distance properly
+			if (Main.useLimit && ((Math.pow(chunk[chunkX][chunkZ].posX - Main.camerax,2) + Math.pow(chunk[chunkX][chunkZ].posZ - Main.cameraz, 2)) > (Main.dist * Main.dist)))
+				continue;
+			int x = point.x;
+			int y = point.y;
+			int z = point.z;
+			int blockType = chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
+			if (visited[point.x][point.y][point.z] == VISITED && !typeIsTransparent(blockType))
 				continue;
 			/*if (blockType == 9 || blockType == 8) {
 				System.out.println();
 			}*/
 			addNeighbors(x, y, z, blockType);
-			if (blockType != 0 && visited[x][y][z] != 2){
-				if (blockType == 8 || blockType == 9) { // If its water
-					if (!hasCreatedMesh){
-						pw.water.write("mesh {\n");
-						hasCreatedMesh = true;
-					}
-					addWaterBlock(pw.water, x, y, z);
-				} else {
-					// Find the beginning of the run
-					while (x > 0 && blockType == this.getBlockType(x - 1, y, z))
-						x--;
-					int run = 1;
-					while (x + run < 512 && blockType == this.getBlockType(x + run, y, z)){
-						visited[x + run][y][z] = 2;
-						addNeighbors(x + run, y, z, blockType);
-						run++;
-					}
-					//if (blockType == 8 || blockType == 9) { // Water block
-					//	waterBlocks.add(new WaterBlock(x, y, z, run));
-					//} else {
-					this.writePOVBlock(blockType, run, pw, x, y, z);
-					//}
+			if (blockType != 0 && blockType != 8 && blockType != 9&& visited[x][y][z] != VISITED){
+				// Find the beginning of the run
+				while (x > 0 && blockType == this.getBlockType(x - 1, y, z))
+					x--;
+				int run = 1;
+				while (x + run < 512 && blockType == this.getBlockType(x + run, y, z)){
+					visited[x + run][y][z] = VISITED;
+					addNeighbors(x + run, y, z, blockType);
+					run++;
 				}
+				//if (blockType == 8 || blockType == 9) { // Water block
+				//	waterBlocks.add(new WaterBlock(x, y, z, run));
+				//} else {
+				this.writePOVBlock(blockType, run, pw, x, y, z);
+				//}
+				
 				blocksWritten++;
 				if (blocksWritten % 10000 == 0) {
 					pw.printf("#debug \"%d\\n\"\n", blocksWritten);
 				}
 			}
-			
-			
-			
 		}
 
 		pw.printf("\n translate <%d, 0, %d> } \n", this.posX * 512, this.posZ * 512);
 		System.out.printf("\n translate <%d, 0, %d> } \n", this.posX * 512, this.posZ * 512);
-		if (hasCreatedMesh)
-			pw.water.printf("hollow translate <%d, -0.2, %d>\n material { waterMaterial } }\n ", this.posX * 512, this.posZ * 512);
 		return blocksWritten;
 	}
 	
@@ -197,7 +230,7 @@ public class Region {
 	}
 	
 	public void addWaterBlock(PrintWriter pw, int x, int y, int z){
-		//int blockType;
+
 		if (x > 0) {
 			if (!isWater(getBlockType(x-1, y, z))){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
@@ -248,6 +281,13 @@ public class Region {
 		}
 	}
 	
+	/**
+	 * Returns true if any block can be seen from the other side of the block.
+	 * Essentially, any block that doesn't fill the entire space of a block (Such as a stair or tall grass block)
+	 * or is solid but actually transparent (Such as glass or water) 
+	 * @param type The block ID
+	 * @return boolean
+	 */
 	public boolean typeIsTransparent(int type) {
 		switch (type){
 		case 0:
@@ -270,39 +310,39 @@ public class Region {
 	public void addNeighbors(int x, int y, int z, int blockType){
 		if (typeIsTransparent(blockType)) { 
 			if (x > 0) {
-				if (visited[x - 1][y][z] == 0) {
+				if (visited[x - 1][y][z] == NOT_VISITED) {
 					queue.add(new Point(x - 1,y, z));
-					visited[x-1][y][z]= 1;
+					visited[x-1][y][z] = QUEUED;
 				}
 			}
 			if (x < 511) {
-				if (visited[x + 1][y][z] == 0) {
+				if (visited[x + 1][y][z] == NOT_VISITED) {
 					queue.add(new Point(x + 1,y, z));
-					visited[x+1][y][z]= 1;
+					visited[x+1][y][z] = QUEUED;
 				}
 			}
 			if (y > Main.minY) {
-				if (visited[x][y - 1][z] == 0) {
+				if (visited[x][y - 1][z] == NOT_VISITED) {
 					queue.add(new Point(x, y - 1, z));
-					visited[x][y-1][z]= 1;
+					visited[x][y-1][z] = QUEUED;
 				}
 			}
 			if (y < 255) {
-				if (visited[x][y + 1][z] == 0) {
+				if (visited[x][y + 1][z] == NOT_VISITED) {
 					queue.add(new Point(x, y + 1, z));
-					visited[x][y+1][z]= 1;
+					visited[x][y+1][z] = QUEUED;
 				}
 			}
 			if (z > 0) {
-				if (visited[x][y][z - 1] == 0) {
+				if (visited[x][y][z - 1] == NOT_VISITED) {
 					queue.add(new Point(x,y, z - 1));
-					visited[x][y][z-1]= 1;
+					visited[x][y][z-1] = QUEUED;
 				}
 			}
 			if (z < 511) {
-				if (visited[x][y][z + 1] == 0) {
+				if (visited[x][y][z + 1] == NOT_VISITED) {
 					queue.add(new Point(x, y, z + 1));
-					visited[x][y][z+1]= 1;
+					visited[x][y][z+1] = QUEUED;
 				}
 			}
 		}
@@ -330,6 +370,7 @@ public class Region {
 			pw.print("pigment {color rgb <0.25, 0.25, 0.25> } ");
 			printTranslate(pw, x, y, z, run);
 			break;
+		// TODO: Properly handle moving water
 		case 8:  // Moving water
 			//printBox(pw, run);
 			//pw.print("pigment {color rgb <0.0, 0.0, 1> } ");
@@ -375,29 +416,4 @@ public class Region {
 		pw.printf("box { 0, <1, %d, 1> ", run);
 	}
 	
-	/*public int writePOVStringOld(PrintWriter pw){
-		//pw.println("#include \"minecraft.inc\"");
-		int chunksWritten = 0;
-		for (int x = 0; x < 32; x++){
-			for (int y = 0; y < 32; y++){
-				//System.out.printf("XX: %d YY: %d\n", x, y);
-				if (chunk[x][y] != null) {
-					if ((Math.pow(chunk[x][y].posX - Main.camerax,2) + Math.pow(chunk[x][y].posZ - Main.cameraz, 2)) > Main.dist)
-						continue;
-					pw.println("union {");
-					//pw.print(chunk[x][y].getPOVString());
-					chunk[x][y].WritePOVString(pw);
-					pw.printf("\ntranslate <%d,0,%d>} \n", x*16+this.posX*256, y*16+this.posZ*256);
-					//pw.println("#debug \".\"");
-					System.out.print(".");
-					chunksWritten++;
-					if (chunksWritten % 50 == 0){
-						System.out.printf("%d\n",chunksWritten);
-						pw.printf("#debug \"%d\\n\"\n", chunksWritten);
-					}
-				}
-			}
-		}
-		return chunksWritten;
-	}*/
 }
