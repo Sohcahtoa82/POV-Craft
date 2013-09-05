@@ -131,11 +131,11 @@ public class Region {
 			int x = point.x;
 			int y = point.y;
 			int z = point.z;
-			int blockType = chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
-			if (visited[x][y][z] == VISITED && !typeIsTransparent(blockType))
+			BlockType blockType = chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
+			if (visited[x][y][z] == VISITED && !blockType.isTransparent())
 				continue;
 			addNeighbors(x, y, z, blockType);
-			if ((blockType == 8 || blockType == 9) && visited[x][y][z] != VISITED){
+			if (blockType.isWater() && visited[x][y][z] != VISITED){
 				if (!hasCreatedMesh){
 					pw.water.write("mesh {\n");
 					hasCreatedMesh = true;
@@ -180,14 +180,15 @@ public class Region {
 			int x = point.x;
 			int y = point.y;
 			int z = point.z;
-			int blockType = chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
-			if (visited[point.x][point.y][point.z] == VISITED && !typeIsTransparent(blockType))
+			BlockType blockType = chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
+			if (visited[point.x][point.y][point.z] == VISITED && !blockType.isTransparent())
 				continue;
+			
 			/*if (blockType == 9 || blockType == 8) {
 				System.out.println();
 			}*/
 			addNeighbors(x, y, z, blockType);
-			if (blockType != 0 && blockType != 8 && blockType != 9&& visited[x][y][z] != VISITED){
+			if (blockType != BlockType.AIR && !blockType.isWater() && visited[x][y][z] != VISITED){
 				// Find the beginning of the run
 				while (x > 0 && blockType == this.getBlockType(x - 1, y, z))
 					x--;
@@ -197,11 +198,8 @@ public class Region {
 					addNeighbors(x + run, y, z, blockType);
 					run++;
 				}
-				//if (blockType == 8 || blockType == 9) { // Water block
-				//	waterBlocks.add(new WaterBlock(x, y, z, run));
-				//} else {
+
 				this.writePOVBlock(blockType, run, pw, x, y, z);
-				//}
 				
 				blocksWritten++;
 				if (blocksWritten % 10000 == 0) {
@@ -215,24 +213,20 @@ public class Region {
 		return blocksWritten;
 	}
 	
-	public int getBlockType(int x, int y, int z){
+	public BlockType getBlockType(int x, int y, int z){
 		int chunkX = x / 16;
 		int chunkZ = z / 16;
 		if (chunk[chunkX][chunkZ] != null){
 			return chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
 		} else {
-			return 0;
+			return BlockType.AIR;
 		}
-	}
-	
-	public boolean isWater(int blockType) {
-		return (blockType == 8 || blockType == 9);
 	}
 	
 	public void addWaterBlock(PrintWriter pw, int x, int y, int z){
 
 		if (x > 0) {
-			if (!isWater(getBlockType(x-1, y, z))){
+			if (!getBlockType(x-1, y, z).isWater()){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
 						x - 0.00001, y + 1, z - 0.00001,		x - 0.00001, y + 1, z + 1.00001, 		x - 0.00001, y, z - 0.00001);
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
@@ -240,7 +234,7 @@ public class Region {
 			}
 		}
 		if (x < 510) {
-			if (!isWater(getBlockType(x+1, y, z))){
+			if (!getBlockType(x+1, y, z).isWater()){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
 						x + 1.00001, y + 1, z - 0.00001,			x + 1.00001, y + 1, z + 1.00001, 			x + 1.00001, y, z - 0.00001);
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
@@ -248,7 +242,7 @@ public class Region {
 			}
 		}
 		if (y > Main.minY) {
-			if (!isWater(getBlockType(x, y-1, z))){
+			if (!getBlockType(x, y-1, z).isWater()){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
 						x - 0.00001, y, z - 0.00001,			x + 1.00001, y, z - 0.00001, 			x - 0.00001, y, z + 1.00001);
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
@@ -256,7 +250,7 @@ public class Region {
 			}
 		}
 		if (y < 254) {
-			if (!isWater(getBlockType(x, y+1, z))){
+			if (!getBlockType(x, y+1, z).isWater()){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
 						x - 0.00001, y+1, z - 0.00001,			x + 1.00001, y+1, z - 0.00001, 			x - 0.00001, y+1, z + 1.00001);
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n" ,
@@ -264,7 +258,7 @@ public class Region {
 			}
 		}
 		if (z > 0) {
-			if (!isWater(getBlockType(x, y, z-1))){
+			if (!getBlockType(x, y, z-1).isWater()){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
 						x-0.00001, y, z - 0.00001,			x + 1.00001, y, z- 0.00001, 			x - 0.00001, y+1, z- 0.00001);
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
@@ -272,7 +266,7 @@ public class Region {
 			}
 		}
 		if (z < 510) {
-			if (!isWater(getBlockType(x, y, z+1))){
+			if (!getBlockType(x, y, z+1).isWater()){
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> } \n",
 						x-0.00001, y, z + 1.00001,			x + 1.00001, y, z + 1.00001, 			x - 0.00001, y+1, z + 1.00001);
 				pw.printf("triangle { <%f, %d, %f>, <%f, %d, %f>, <%f, %d, %f> }\n",
@@ -281,34 +275,8 @@ public class Region {
 		}
 	}
 	
-	/**
-	 * Returns true if any block can be seen from the other side of the block.
-	 * Essentially, any block that doesn't fill the entire space of a block (Such as a stair or tall grass block)
-	 * or is solid but actually transparent (Such as glass or water) 
-	 * @param type The block ID
-	 * @return boolean
-	 */
-	public boolean typeIsTransparent(int type) {
-		switch (type){
-		case 0:
-		case 6:
-		case 8:
-		case 9:
-		case 18:
-		case 20:
-		case 31:
-		case 37:
-		case 38:
-		case 39:
-		case 106:
-			return true;
-		default:
-			return false;
-		}
-	}
-	
-	public void addNeighbors(int x, int y, int z, int blockType){
-		if (typeIsTransparent(blockType)) { 
+	public void addNeighbors(int x, int y, int z, BlockType blockType){
+		if (blockType.isTransparent()) { 
 			if (x > 0) {
 				if (visited[x - 1][y][z] == NOT_VISITED) {
 					queue.add(new Point(x - 1,y, z));
@@ -348,58 +316,54 @@ public class Region {
 		}
 	}
 	
-	public void writePOVBlock(int type, int run, PrintWriterGroup pw, int x, int y, int z){
+	public void writePOVBlock(BlockType type, int run, PrintWriterGroup pw, int x, int y, int z){
 		switch (type){
-		case 0:  // Air
+		case AIR:  // Air
 			return;
-		case 1:  // stone
+		case STONE:  // stone
 			pw.printf("object { MyBoxSimple(\"stone.png\", %d) ", run);
 			printTranslate(pw, x, y, z, run);
 			break;
-		case 2:  // grass
+		case GRASS_BLOCK:  // grass
 			pw.printf("object { MyBoxComplex(\"grass_top.png\", \"grass_side.png\", \"dirt.png\", %d) ", run);
 			printTranslate(pw, x, y, z, run);
 			break;
-		case 3:  // dirt
+		case DIRT:  // dirt
 			pw.printf("object { MyBoxSimple(\"dirt.png\", %d) ", run);
 			printTranslate(pw, x, y, z, run);
 			break;
-		case 4:  // cobblestone
+		case COBBLESTONE:  // cobblestone
 			printBox(pw, run);
 			pw.print("pigment {color rgb <0.25, 0.25, 0.25> } ");
 			printTranslate(pw, x, y, z, run);
 			break;
 		// TODO: Properly handle moving water
-		case 8:  // Moving water
+		case WATER_MOVING:  // Moving water
 			//printBox(pw, run);
 			//pw.print("pigment {color rgb <0.0, 0.0, 1> } ");
 			//printTranslate(pw, x, y, z, run);
 			//break;
-		case 9:  // water
+		case WATER_STATIONARY:  // water
 			//pw.printf("object { Water(%d, <%d, %d, %d>) ", run, x + this.posX*16, y-run + 1, z+this.posZ*16);
 			pw.water.printf("object { Water(%d, <%d, %d, %d>) ", run, x, y, z);
 			printTranslate(pw.water, x, y, z, run);
 			break;
-		case 12: // sand
+		case SAND: // sand
 			pw.printf("object { MyBoxSimple(\"sand.png\", %d) ", run);
 			printTranslate(pw, x, y, z, run);
 			break;
-		case 17:  // wood
+		case WOOD:  // wood
 			pw.printf("object { MyBoxComplex(\"wood_top.png\", \"wood_side.png\", \"wood_top.png\", %d) ", run);
 			printTranslate(pw, x, y, z, run);
 			break;
-		case 18: // leaves
+		case LEAVES: // leaves
 			pw.printf("object { MyBoxSimple(\"leaves.png\", %d) ", run);
 			printTranslate(pw, x, y, z, run);
 			break;
-		case 31: // tall grass
-			return;
-		case 106: // vines 
-			return;
 		default: 
-			if (!BlockType.unimplemented[type]){
-				System.out.printf("Unimplemented block: %d (%s)\n", type, BlockType.getBlockName(type));
-				BlockType.unimplemented[type] = true;
+			if (!BlockType.unimplemented[type.blockType]){
+				System.out.printf("Unimplemented block: %d (%s)\n", type.blockType, type.toString());
+				BlockType.unimplemented[type.blockType] = true;
 			}
 			return;
 			//printBox(pw, run);

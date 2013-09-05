@@ -8,7 +8,7 @@ public class Chunk {
 	public int timeStamp;
 	public byte[] decompressedData;
 	public NbtTagCompound tag;
-	public int[][][] blockType = new int[16][256][16];
+	public BlockType[][][] blockType = new BlockType[16][256][16];
 	public int posX;
 	public int posZ;
 	
@@ -16,7 +16,7 @@ public class Chunk {
 		for (int x = 0; x < 16; x++){
 			for (int y = 0; y < 256; y++){
 				for (int z = 0; z < 16; z++){
-					blockType[x][y][z] = 0;
+					blockType[x][y][z] = BlockType.AIR;
 				}
 			}
 		}
@@ -45,7 +45,9 @@ public class Chunk {
 			for (int y = sectionNum * 16; y < sectionNum * 16 + 16; y++){
 				for (int z = 0; z < 16; z++){
 					for (int x = 0; x < 16; x++){
-						blockType[x][y][z] = list[l];
+						// The list array is signed, but it really should be unsigned, but Java doesn't support unsigned
+						// Properly handle negative numbers and unwrap them to positive numbers
+						blockType[x][y][z] = BlockType.blockTypes[(list[l] < 0 ? 256 + list[l] : list[l])];
 						l++;
 					}
 				}
@@ -74,8 +76,8 @@ public class Chunk {
 			//System.out.printf("X: %d\n", x);
 			for (int y = 0; y < 256; y++){
 				for (int z = 0; z < 16; z++){
-					int type = blockType[x][y][z];
-					if (type > 0)
+					BlockType type = blockType[x][y][z];
+					if (type != BlockType.AIR)
 						str = str.concat(String.format("object { blocks[%d] translate <%d, %d, %d> }\n", type, x, y, z));
 				}
 			}

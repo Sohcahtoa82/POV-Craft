@@ -169,6 +169,7 @@ public enum BlockType {
 	;
 	
 	static boolean[] unimplemented = new boolean[173];
+	static final BlockType[] blockTypes = BlockType.values();
 	
 	int blockType;
 	BlockType(int blockType){
@@ -176,6 +177,95 @@ public enum BlockType {
 	}
 	
 	static String getBlockName(int type){
-		return BlockType.values()[type].toString();
+		return blockTypes[type].toString();
+	}
+	
+	public boolean isWater() {
+		return this == WATER_MOVING || this == WATER_STATIONARY; 
+	}
+	
+	/**
+	 * Returns true if any block can be seen from the other side of the block.
+	 * Essentially, any block that doesn't fill the entire space of a block (Such as a stair or tall grass block)
+	 * or is solid but actually transparent (Such as glass, water, or leaves) 
+	 * @param type The block ID
+	 * @return boolean
+	 */
+	public boolean isTransparent() {
+		switch (this){
+		case STONE:
+		case GRASS_BLOCK:
+		case DIRT:
+		case COBBLESTONE:
+		case WOOD_PLANKS:
+		case BEDROCK:
+		case SAND:
+		case GRAVEL:
+		case GOLD_ORE:
+		case IRON_ORE:
+		case COAL_ORE:
+		case WOOD:
+		case SPONGE:
+		case LAPIS_LAZULI_ORE:
+		case LAPIS_LAZULI_BLOCK:
+		case DISPENSER:
+		case SANDSTONE:
+		case NOTE_BLOCK:
+		case WOOL:
+		case BLOCK_MOVED_BY_PISTON:
+		case GOLD_BLOCK:
+		case IRON_BLOCK:
+		case DOUBLE_STONE_SLAB:
+		case BRICKS:
+		case TNT:
+		case BOOKSHELF:
+		case MOSS_STONE:
+		case OBSIDIAN:
+		case CHEST:
+		case DIAMOND_ORE:
+		case DIAMOND_BLOCK:
+		case CRAFTING_TABLE:
+		case FARMLAND: // TODO: Farm land isn't quite a full block
+		case FURNACE:
+		case FURNACE_BURNING:
+		case REDSTONE_ORE:
+		case REDSTONE_ORE_GLOWING:
+		case SNOW_BLOCK:
+		case CACTUS: // TODO: Treat cactus correctly
+		case CLAY:
+		case JUKEBOX:
+		case PUMPKIN:
+		case NETHERRACK:
+		case SOUL_SAND:
+		case GLOWSTONE:
+		case JACK_O_LANTERN:
+		case LOCKED_CHEST:
+		case MONSTER_EGG:
+		case STONE_BRICKS:
+		case MELON:
+		case MYCELIUM:
+		case NETHER_BRICK:
+		case END_PORTAL_BLOCK:
+		case END_STONE:
+		case REDSTONE_LAMP_INACTIVE:
+		case REDSTONE_LAMP_ACTIVE:
+		case WOODEN_DOUBLE_SLAB:
+		case EMERALD_ORE:
+		case ENDER_CHEST:
+		case EMERALD_BLOCK:
+		case COMMAND_BLOCK:
+		case TRAPPED_CHEST:
+		case REDSTONE_BLOCK:
+		case NETHER_QUARTZ_ORE:
+		case QUARTZ_BLOCK:
+		case DROPPER:
+		case STAINED_CLAY:
+		case HAY_BLOCK:
+		case HARDENED_CLAY:
+		case COAL_BLOCK:
+			return false;
+		default:
+			return true;
+		}
 	}
 }
