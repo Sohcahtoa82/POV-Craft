@@ -2,11 +2,11 @@
 public class Main {
 
 	public final static String FILE_NAME = "region\\";
-	public final static int camerax = 7;
-	public final static int cameraz = 10;
-	public final static int dist = 5;
+	public final static int MAX_Y = 255;
+	public final static Point3D camera = new Point3D(130, 77, 145);
+	public final static int dist = 100;
 	public final static int minY = 0;
-	public final static boolean useLimit = true;
+	public static boolean useLimit = false;
 	
 	public static void main(String[] args) throws Exception {
 		World world = new World();

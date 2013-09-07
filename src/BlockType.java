@@ -1,3 +1,6 @@
+import java.util.HashMap;
+import java.util.Map;
+
 
 public enum BlockType {
 	// Block IDs from http://www.minecraftwiki.net/wiki/Data_values
@@ -168,16 +171,27 @@ public enum BlockType {
 	COAL_BLOCK(173)
 	;
 	
+	int blockType;
 	static boolean[] unimplemented = new boolean[173];
 	static final BlockType[] blockTypes = BlockType.values();
+	private static final Map<Integer, BlockType> intToTypeMap = new HashMap<Integer, BlockType>();
+	static {
+	    for (BlockType type : BlockType.values()) {
+	        intToTypeMap.put(type.blockType, type);
+	    }
+	}
 	
-	int blockType;
+	
 	BlockType(int blockType){
 		this.blockType = blockType;
 	}
 	
 	static String getBlockName(int type){
 		return blockTypes[type].toString();
+	}
+
+	public static BlockType fromInt(int i) {
+	    return intToTypeMap.get(Integer.valueOf(i));
 	}
 	
 	public boolean isWater() {

@@ -45,9 +45,7 @@ public class Chunk {
 			for (int y = sectionNum * 16; y < sectionNum * 16 + 16; y++){
 				for (int z = 0; z < 16; z++){
 					for (int x = 0; x < 16; x++){
-						// The list array is signed, but it really should be unsigned, but Java doesn't support unsigned
-						// Properly handle negative numbers and unwrap them to positive numbers
-						blockType[x][y][z] = BlockType.blockTypes[(list[l] < 0 ? 256 + list[l] : list[l])];
+						blockType[x][y][z] = BlockType.fromInt(list[l]);
 						l++;
 					}
 				}
@@ -85,37 +83,6 @@ public class Chunk {
 		return str;
 	}
 	
-
-	
-	/*public void WritePOVString(PrintWriterGroup pw) {
-		for (int x = 0; x < 16; x++) {
-			for (int z = 0; z < 16; z++){
-				int lastType = blockType[x][0][z];
-				int type = lastType;
-				int run = 0;
-				for (int y = Main.minY; y < 256; y++){
-					
-					run++;
-					lastType = type;
-					type = blockType[x][y][z];
-					
-					if (type < 0){
-						//System.out.printf("WTF?  Had a Type = %d @ [%d,%d,%d] ",type,x,y,z);
-						type = 2 - type;
-						//System.out.printf("Setting to %d\n", type);
-					}
-					if (type != lastType) {
-						if (lastType != 0) {
-							writePOVBlock(lastType, run, pw, x, y, z);
-							
-						}
-						run = 0;
-					}
-				}
-			}
-		}
-		return;
-	}*/
 
 
 }
