@@ -6,6 +6,27 @@ http://www.imagico.de/pov/water/index.php
 #version 3.7;
 #include "functions.inc"
 
+//#declare loc = <130, 77, 145>;
+//#declare lookat = <117, 68, 189>;
+
+//#declare loc = <389, 81, 349>;
+//#declare lookat = <382, 75, 354>;
+
+//#declare loc = <61,98,13>;
+//#declare lookat = <51, 94, 23>;
+
+//#declare loc = <-200,300,-200>;
+//#declare lookat = <50,0,150>;
+
+//#declare loc = <-47, 69, -114>;
+//#declare lookat = <-38, 69, -114>;
+
+#declare loc = <195, 72, 568>;
+#declare lookat = <215, 64, 529>;
+
+//#declare loc = <-72, 76, 448>;
+//#declare lookat = <-98, 76, 467>;
+
 #declare blocks = array[158];
 
 #declare i = 0;
@@ -14,6 +35,9 @@ http://www.imagico.de/pov/water/index.php
         #declare i = i + 1;
 #end
 
+default {
+        finish { diffuse 0.8 }
+}
 
 #declare blocks[1] = box { 0, 1 pigment {color rgb <0.5, 0.5, 0.5> } }  // stone
 #declare blocks[2] = box { 0, 1 pigment {color rgb <0, 1, 0> } }  // grass
@@ -38,7 +62,31 @@ http://www.imagico.de/pov/water/index.php
         //box { -.5, <.5, .5 + run, .5> pigment { color rgb 1} }*/
 
 
-// S N Bot Top W E
+#macro TopFace(image, run, tx)
+        object{ Face scale <run,1,1> pigment { image_map {png image}} rotate 90*x translate tx+y }  
+#end
+
+#macro BottomFace(image, run, tx)
+        object{ Face scale <run,1,1> pigment { image_map {png image}} rotate 90*x translate tx}  
+#end
+
+#macro NorthFace(image, run, tx)
+        object{ Face scale <run,1,1> pigment { image_map {png image}} translate tx }
+#end
+
+#macro SouthFace(image, run, tx)
+        object{ Face scale <run,1,1> pigment { image_map {png image}} translate tx + z}
+#end
+
+#macro EastFace(image, run, tx)
+        object{ Face scale <run,1,1> pigment { image_map {png image}} rotate -90*y translate tx+x }
+#end
+
+#macro WestFace(image, run, tx)
+        object{ Face scale <run,1,1> pigment { image_map {png image}} rotate -90*y translate tx }
+#end
+
+// N S Bot Top W E
 #macro MyBoxSimple(image, run)
         union {
                 object{ Face scale <run,1,1> pigment { image_map {png image}} }
@@ -104,22 +152,12 @@ http://www.imagico.de/pov/water/index.php
          }
 #end
 
-
-#declare loc = <130, 77, 145>;
-#declare lookat = <117, 68, 189>;
-
-//#declare loc = <61,98,13>;
-//#declare lookat = <51, 94, 23>;
-
-//#declare loc = <0,120,-10>;
-//#declare lookat = <0,0,0>;
-
-
 // perspective (default) camera
 camera {
   location  loc
   look_at   lookat
   right     -x*image_width/image_height
+  angle 90
 }
 
 // create a regular point light source
@@ -139,7 +177,7 @@ camera {
     circular
     orient
   parallel
-  point_at <-300, 0, -100>
+  point_at <-600, 0, -200>
 
   }
 
@@ -153,12 +191,12 @@ global_settings {
         radiosity {
     pretrace_start 64/image_width           // start pretrace at this size
     pretrace_end   2/image_width           // end pretrace at this size
-    count 3                      // higher -> higher quality (1..1600) [35]
+    count 300                      // higher -> higher quality (1..1600) [35]
     nearest_count 5               // higher -> higher quality (1..10) [5]
     error_bound 0.3               // higher -> smoother, less accurate [1.8]
     recursion_limit 1             // how much interreflections are calculated (1..5+) [3]
-    low_error_factor 1           // reduce error_bound during last pretrace step
-    gray_threshold 0.0            // increase for weakening colors (0..1) [0]
+    low_error_factor 0.5           // reduce error_bound during last pretrace step
+    gray_threshold 0.5            // increase for weakening colors (0..1) [0]
     minimum_reuse 2/image_width           // reuse of old radiosity samples [0.015]
     brightness 1                  // brightness of radiosity effects (0..1) [1]
 
@@ -229,7 +267,7 @@ global_settings {
               diffuse 0.0
         
               reflection {
-                0.0, 1.0
+                0.0, 0.9
                 fresnel on
               }
         
@@ -237,28 +275,26 @@ global_settings {
               //roughness 0.003
             }
             normal {
-              /*bozo 1 
-              turbulence 0.9 scale 10 frequency 0.4 phase clock
-              scale <1.0,1,0.3>*0.20  rotate<0,10,0>
-              translate <0, sin(clock*2*pi), 0, cos(clock*2*pi)>
-              translate <0,0,0>*/
+              bozo 
+              turbulence 0.9 scale 10 frequency 0.4
+              scale <0.2,1,0.06>  rotate<0,10,0>
               
-              pigment_pattern{
+              /*pigment_pattern{
                 bozo 
                 //colour_map { [0, rgb sin(clock*pi*2)]// [0.5, rgb sin(clock*pi*2 + pi/2)]
                  //[1, rgb sin(clock*pi*2 + pi/2)]}
                 //color_map { [0, rgbt <0,0,0,abs(0.5-clock)*2+1>] [1, rgbt <1,1,1,abs(0.5-clock)*2+1>] }
                 color_map {
-                #for (xx, 0, 1, 1/255)
-                        [xx, rgb sin((clock*pi*2 + xx*pi*2) * (255/256))]
+                #for (xx, 0, 255/256, 1/255)
+                        [xx, rgb sin((clock*pi*2 + xx*pi*2) * (256/256))]
                 #end
                 }
                 //frequency 1.5 sine_wave phase clock turbulence 0.4 
-                scale <2,1,0.4>  rotate<0,20,0>
-                translate 100*x //translate (clock*2 - floor(clock * 2))*y 
-              }
+                //scale <2,1,0.4>  rotate<0,20,0>
+                //translate 100*x //translate (clock*2 - floor(clock * 2))*y 
+              }*/
               
-            }   
+            }
           }
           
           
@@ -281,5 +317,5 @@ global_settings {
 #debug "...done\n"
 #include "minecraft_glass.inc"
 
-//#include "minecraft.inc"
+#include "minecraft.inc"
 #debug "\nDone parsing.  Pissing myself over the sheer number of objects...\n"
