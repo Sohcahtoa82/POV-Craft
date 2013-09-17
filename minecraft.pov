@@ -1,5 +1,5 @@
 /************************************************
-Credit for water effect goes to Christoph Hormann
+Water based on water designed by Christoph Hormann
 http://www.imagico.de/pov/water/index.php
 ************************************************/
 
@@ -21,11 +21,18 @@ http://www.imagico.de/pov/water/index.php
 //#declare loc = <-47, 69, -114>;
 //#declare lookat = <-38, 69, -114>;
 
-#declare loc = <195, 72, 568>;
-#declare lookat = <215, 64, 529>;
+//#declare loc = <195, 72, 568>;
+//#declare lookat = <215, 64, 529>;
 
 //#declare loc = <-72, 76, 448>;
 //#declare lookat = <-98, 76, 467>;
+
+//#declare loc = <-230, 85, 438>;
+//#declare lookat = <-276, 73, 468>;
+
+#declare loc = <-351, 77, 205>;
+#declare lookat = <-398, 67, 252>;
+
 
 #declare blocks = array[158];
 
@@ -47,20 +54,7 @@ default {
 #declare blocks[9] = box { 0, 1 pigment {color rgb <0, 0, 1> } }  // water
 #declare blocks[12] = box { 0, 1 } //pigment {color rgb <.8, .8, .4> } }  // sand
 
-//#declare Face = plane { -z, 0.5 }
 #declare Face = polygon { 5, <0, 0>, <0, 1>, <1, 1>, <1, 0>, <0,0> }
-
-        /*intersection {
-                object {Face pigment { image_map {png image}}}
-                object {Face pigment { image_map {png image}} rotate y * 90 }
-                object {Face pigment { image_map {png image}} rotate y * 180}
-                object {Face pigment { image_map {png image}} rotate y * 270}
-                object {Face pigment { image_map {png image}} rotate x * 90 translate <0,run,0>}
-                object {Face pigment { image_map {png image}} rotate x * -90}
-                //bounded_by { box { -0.6, <0.6,run + 1.6,1.6> } }
-        }
-        //box { -.5, <.5, .5 + run, .5> pigment { color rgb 1} }*/
-
 
 #macro TopFace(image, run, tx)
         object{ Face scale <run,1,1> pigment { image_map {png image}} rotate 90*x translate tx+y }  
@@ -98,17 +92,6 @@ default {
         }
 #end
 
-         /*intersection {
-                object {Face pigment { image_map {png side_image} translate 0.5*y }}
-                object {Face pigment { image_map {png side_image} translate 0.5*y} rotate y * 90 }
-                object {Face pigment { image_map {png side_image} translate 0.5*y} rotate y * 180}
-                object {Face pigment { image_map {png side_image} translate 0.5*y} rotate y * 270}
-                object {Face pigment { image_map {png top_image}} rotate x * 90 translate <0,run,0>}
-                object {Face pigment { image_map {png bottom_image}} rotate x * -90}
-                //bounded_by { box { -0.6, <0.6,run + 1.6,0.6> } }
-        }
-        //box { -.5, <.5, .5 + run, .5> pigment { color rgb 1} }*/
-
 #macro MyBoxComplex(top_image, side_image, bottom_image, run)
         
         union {
@@ -121,37 +104,6 @@ default {
         }
 #end
 
-#macro Water(run, tx)
-        /*polygon {    
-                5,
-                <0, 0, 0>, <0, 0, 1>, <1, 0, 1>, <1, 0, 0>, <0, 0, 0>*/
-        box { -0.01, <1.01,run - 0.2,1.01>
-        //box { 0, <1,run - 0.2,1>
-        //#if (mod(tx.x, 2) = mod(tx.z, 2))
-        //        translate <0,0.00001,0>
-        //#end
-
-                /*pigment { 
-                        bozo scale 1.0 
-                        turbulence 0.1
-                        frequency 0.1
-                        color_map { [0.0 rgbf <0.0, 0.0, 0.5, 0.999>]
-                                    //[0.6 rgbf <1,1,1,0.8>]
-                                    [1.0 rgbf <0.5,0.5,0.9, 0.999>]}
-                        translate -tx
-                }*/
-                /*
-                texture{pigment { rgbf <0,0,0,.9999> } 
-              normal { bozo 1 
-                       turbulence 0.9 scale 10 frequency 0.4}
-              finish { ambient 0.0 diffuse 0.8 
-                       brilliance 6.0 phong 0.8 phong_size 120
-                       reflection 0.6}
-              scale <1.0,1,0.3>*0.20  rotate<0,10,0>  translate -tx*/
-              
-         }
-#end
-
 // perspective (default) camera
 camera {
   location  loc
@@ -160,12 +112,6 @@ camera {
   angle 90
 }
 
-// create a regular point light source
-//light_source {
-//  loc                  // light's position (translated below)
-//  color rgb <1,1,1>    // light's color
-  
-//}
 
  light_source { 
   // put this inside a light_source to make it parallel
@@ -185,10 +131,11 @@ camera {
 
 global_settings {
 
-        ambient_light 0
-        //max_trace_level 256
+  ambient_light 0
+  assumed_gamma 1.0
+  //max_trace_level 256
         
-        radiosity {
+  radiosity {
     pretrace_start 64/image_width           // start pretrace at this size
     pretrace_end   2/image_width           // end pretrace at this size
     count 300                      // higher -> higher quality (1..1600) [35]
@@ -196,7 +143,7 @@ global_settings {
     error_bound 0.3               // higher -> smoother, less accurate [1.8]
     recursion_limit 1             // how much interreflections are calculated (1..5+) [3]
     low_error_factor 0.5           // reduce error_bound during last pretrace step
-    gray_threshold 0.5            // increase for weakening colors (0..1) [0]
+    gray_threshold 0.2            // increase for weakening colors (0..1) [0]
     minimum_reuse 2/image_width           // reuse of old radiosity samples [0.015]
     brightness 1                  // brightness of radiosity effects (0..1) [1]
 
@@ -231,30 +178,23 @@ global_settings {
     rotate -135*x
   }
   
-  /*plane{<0,1,0>,1 hollow double_illuminate no_shadow
-      
-        texture{ pigment {color rgb<0.1,0.35,0.8>*0.8}
-                          finish {ambient 1  diffuse 1}
-               } // end texture 1
-
-        texture{ pigment{ bozo turbulence 0.75
-                          octaves 6  omega 0.7 lambda 2 
-                          color_map {
-                          [0.0  color rgb <0.95, 0.95, 0.95> ]
-                          [0.05  color rgb <1, 1, 1>*1.25 ]
-                          [0.15 color rgb <0.85, 0.85, 0.85> ]
-                          [0.55 color rgbt <1, 1, 1, 1>*1 ]
-                          [1.0 color rgbt <1, 1, 1, 1>*1 ]
-                          } // end color_map 
-                         translate< 3, 0,-1>
-                         scale <0.3, 0.4, 0.2>*3
-                        } // end pigment
-                 finish {ambient 1 diffuse 1}
-               } // end texture 2
-
-      scale 10000} */ 
-
 #debug "Water...\n"
+
+#declare func1 = function { pattern { bozo turbulence 0.1 } };
+#declare func2 = function { pattern { bozo turbulence 0.1 } };
+#declare func3 = function { func1(x, y, z)* (cos(clock * 2 * pi) *0.5+ 0.5)};
+#declare func4 = function { func2(x, y+10, z)* (-cos(clock * 2 * pi) *0.5+ 0.5)};
+#if (clock < 0.5)
+        #declare func5 = function { func3(x , y+ (clock + 0.5), z)  };
+#else
+        #declare func5 = function { func3(x , y+ (clock - 0.5), z)};
+#end
+//#if (clock < 0.75)
+        #declare func6 = function { func4(x, y + (1 - clock), z) };
+//#else
+        //#declare func6 = function { func4(x , y+ (clock - 0.75), z) };
+//#end
+#declare funcfinal = function { (func5(x, y, z) + func6(x, y, z)) };// / (cos(clock * 2 * pi) * 0.5 + sin(clock * 2 * pi) * 0.5 + 1) };
 
 #declare waterMaterial = material {
           texture {
@@ -267,7 +207,7 @@ global_settings {
               diffuse 0.0
         
               reflection {
-                0.0, 0.9
+                0.0, 1
                 fresnel on
               }
         
@@ -275,9 +215,11 @@ global_settings {
               //roughness 0.003
             }
             normal {
-              bozo 
-              turbulence 0.9 scale 10 frequency 0.4
-              scale <0.2,1,0.06>  rotate<0,10,0>
+                function { funcfinal(x, y, z) }
+                bump_size 4
+              //bozo 
+              //turbulence 0.9 scale 10 frequency 0.4
+              //scale <0.2,1,0.06>  rotate<0,10,0>
               
               /*pigment_pattern{
                 bozo 

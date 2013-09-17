@@ -1,5 +1,6 @@
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -29,7 +30,12 @@ public class World {
 	private LinkedList<Point3D> queue = new LinkedList<Point3D>();
 	
 	public void loadRegionDirectory(String dir) throws Exception{
-		String[] files = (new File(dir)).list();
+		String[] files = (new File(dir)).list(new FilenameFilter(){
+			@Override
+			public boolean accept(File file, String filename) {
+				return filename.toLowerCase().endsWith(".mca");
+			}
+		});
 		System.out.printf("Loading %d region files\n", files.length);
 		for (int i = 0; i < files.length; i++){
 			System.out.printf("Loading %s\n", files[i]);
@@ -132,7 +138,6 @@ public class World {
 		int blocksWritten = 0;
 		
 		System.out.printf("Writing %s faces...", direction.value.toLowerCase());
-		pw.write("union {\n");
 		while (!queue.isEmpty()){
 			//System.out.printf("Queue size: %d\n", queue.size());
 			Point3D point = queue.poll();
@@ -201,121 +206,8 @@ public class World {
 		}
 		
 		System.out.printf("done\n");
-		pw.printf("\n  } \n");
 		return blocksWritten;
 	}
-	
-	/*public int writeNorthFaces(PrintWriterGroup pw) {
-		
-		queue.add(Main.camera);
-		resetVisitedArrays();
-
-		int blocksWritten = 0;
-		
-		System.out.printf("Writing north faces...");
-		pw.write("union {\n");
-		while (!queue.isEmpty()){
-			//System.out.printf("Queue size: %d\n", queue.size());
-			Point3D point = queue.poll();
-			if (Main.useLimit && point.distanceFrom(Main.camera) > Main.dist)
-				continue;
-			int x = point.x;
-			int y = point.y;
-			int z = point.z;
-			if (getVisited(x, y, z) == VISITED)
-				continue;
-			BlockType blockType = getBlockType(x, y, z);
-			if (blockType == null)
-				continue;
-			
-			BlockType adjacent = getBlockType(x, y, z - 1);	
-			if (adjacent != null && !adjacent.isTransparent())
-				continue;
-			
-			addNeighbors(x, y, z, blockType);
-			if (blockType != BlockType.AIR && !blockType.isWater()){
-				// Find the beginning of the run
-				while (blockType == this.getBlockType(x - 1, y, z) && getVisited(x - 1, y, z) != VISITED)
-					x--;
-				int run = 0;
-				while (blockType == this.getBlockType(x + run, y, z) && getVisited(x + run, y, z) != VISITED){
-					setVisited(x + run, y, z, VISITED);
-					addNeighbors(x + run, y, z, blockType);
-					run++;
-				}
-				setVisited(x + run, y, z, VISITED);
-
-				this.writeNorthFace(blockType, run, pw, x, y, z);
-				
-				blocksWritten++;
-				if (blocksWritten % 100000 == 0)
-					System.out.print(".");
-				if (blocksWritten % 10000 == 0) {
-					pw.printf("#debug \"%d\\n\"\n", blocksWritten);
-				}
-			}
-		}
-		
-		System.out.printf("done\n");
-		pw.printf("\n  } \n");
-		return blocksWritten;
-	}*/
-	
-	/*public int writeSouthFaces(PrintWriterGroup pw) {
-		
-		queue.add(Main.camera);
-		resetVisitedArrays();
-
-		int blocksWritten = 0;
-		
-		System.out.printf("Writing north faces...");
-		pw.write("union {\n");
-		while (!queue.isEmpty()){
-			//System.out.printf("Queue size: %d\n", queue.size());
-			Point3D point = queue.poll();
-			if (Main.useLimit && point.distanceFrom(Main.camera) > Main.dist)
-				continue;
-			int x = point.x;
-			int y = point.y;
-			int z = point.z;
-			if (getVisited(x, y, z) == VISITED)
-				continue;
-			BlockType blockType = getBlockType(x, y, z);
-			if (blockType == null)
-				continue;
-			
-			BlockType adjacent = getBlockType(x, y, z + 1);	
-			if (adjacent != null && !adjacent.isTransparent())
-				continue;
-			
-			addNeighbors(x, y, z, blockType);
-			if (blockType != BlockType.AIR && !blockType.isWater()){
-				// Find the beginning of the run
-				while (blockType == this.getBlockType(x - 1, y, z) && getVisited(x - 1, y, z) != VISITED)
-					x--;
-				int run = 0;
-				while (blockType == this.getBlockType(x + run, y, z) && getVisited(x + run, y, z) != VISITED){
-					setVisited(x + run, y, z, VISITED);
-					addNeighbors(x + run, y, z, blockType);
-					run++;
-				}
-				setVisited(x + run, y, z, VISITED);
-
-				this.writeSouthFace(blockType, run, pw, x, y, z);
-				
-				blocksWritten++;
-				if (blocksWritten % 100000 == 0)
-					System.out.print(".");
-				if (blocksWritten % 10000 == 0) {
-					pw.printf("#debug \"%d\\n\"\n", blocksWritten);
-				}
-			}
-		}
-		
-		System.out.printf("done\n");
-		pw.printf("\n  } \n");
-		return blocksWritten;
-	}*/
 	
 	public BlockType getBlockType(int x, int y, int z){		
 		Region region = getContainingRegion(x, z);
@@ -457,30 +349,6 @@ public class World {
 			region.visited[Math.abs(x % 512)][y][Math.abs(z % 512)] = visited;
 	}
 	
-	/*public void writeTopFace(BlockType type, int run, PrintWriterGroup pw, int x, int y, int z){
-		if (type.isTransparent() && type != BlockType.LEAVES)
-			return;
-		
-		String texture = getTopTexture(type);
-		pw.printf("object { TopFace(\"%s\", %d, <%d, %d, %d>) }\n", texture, run, x, y, z);
-	}
-	
-	public void writeNorthFace(BlockType type, int run, PrintWriterGroup pw, int x, int y, int z){
-		if (type.isTransparent() && type != BlockType.LEAVES)
-			return;
-		
-		String texture = getNorthTexture(type);
-		pw.printf("object { NorthFace(\"%s\", %d, <%d, %d, %d>) }\n", texture, run, x, y, z);
-	}
-	
-	public void writeSouthFace(BlockType type, int run, PrintWriterGroup pw, int x, int y, int z){
-		if (type.isTransparent() && type != BlockType.LEAVES)
-			return;
-		
-		String texture = getSouthTexture(type);
-		pw.printf("object { SouthFace(\"%s\", %d, <%d, %d, %d>) }\n", texture, run, x, y, z);
-	}*/
-	
 	public String getNorthSouthTexture(BlockType type){
 		// TODO: Make these use official Minecraft texture file names
 		switch (type){
@@ -549,65 +417,6 @@ public class World {
 		return getTopTexture(type);
 	}
 	
-	public void writePOVBlock(BlockType type, int run, PrintWriterGroup pw, int x, int y, int z){
-		switch (type){
-		case AIR:  // Air
-			return;
-		case STONE:  // stone
-			pw.printf("object { MyBoxSimple(\"stone.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		case GRASS_BLOCK:  // grass
-			pw.printf("object { MyBoxComplex(\"grass_top.png\", \"grass_side.png\", \"dirt.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		case DIRT:  // dirt
-			pw.printf("object { MyBoxSimple(\"dirt.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		case COBBLESTONE:  // cobblestone
-			printBox(pw, run);
-			pw.print("pigment {color rgb <0.25, 0.25, 0.25> } ");
-			printTranslate(pw, x, y, z, run);
-			break;
-		case BEDROCK:
-			pw.printf("object { MyBoxSimple(\"bedrock.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		// TODO: Properly handle moving water
-		case WATER_MOVING:  // Moving water
-			//printBox(pw, run);
-			//pw.print("pigment {color rgb <0.0, 0.0, 1> } ");
-			//printTranslate(pw, x, y, z, run);
-			//break;
-		case WATER_STATIONARY:  // water
-			//pw.printf("object { Water(%d, <%d, %d, %d>) ", run, x + this.posX*16, y-run + 1, z+this.posZ*16);
-			pw.water.printf("object { Water(%d, <%d, %d, %d>) ", run, x, y, z);
-			printTranslate(pw.water, x, y, z, run);
-			break;
-		case SAND: // sand
-			pw.printf("object { MyBoxSimple(\"sand.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		case WOOD:  // wood
-			pw.printf("object { MyBoxComplex(\"wood_top.png\", \"wood_side.png\", \"wood_top.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		case LEAVES: // leaves
-			pw.printf("object { MyBoxSimple(\"leaves.png\", %d) ", run);
-			printTranslate(pw, x, y, z, run);
-			break;
-		default: 
-			if (!BlockType.unimplemented[type.blockType]){
-				//System.out.printf("Unimplemented block: %d (%s)\n", type.blockType, type.toString());
-				BlockType.unimplemented[type.blockType] = true;
-			}
-			return;
-			//printBox(pw, run);
-			//pw.print("pigment {color rgb 1 } ");
-			//break;
-		}
-	}
 	private void printTranslate(PrintWriterGroup pw, int x, int y, int z, int run) {
 		pw.printf("translate <%d, %d, %d> }\n", x, y, z);
 	}
