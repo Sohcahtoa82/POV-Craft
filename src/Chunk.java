@@ -9,6 +9,7 @@ public class Chunk {
 	public byte[] decompressedData;
 	public NbtTagCompound tag;
 	public BlockType[][][] blockType = new BlockType[16][256][16];
+	public byte[][][] visited = new byte[16][Main.MAX_Y + 1][16];
 	public int posX;
 	public int posZ;
 	
@@ -17,6 +18,17 @@ public class Chunk {
 			for (int y = 0; y < 256; y++){
 				for (int z = 0; z < 16; z++){
 					blockType[x][y][z] = BlockType.AIR;
+				}
+			}
+		}
+		resetVisited();
+	}
+	
+	public void resetVisited(){
+		for (int x = 0; x < 16; x++){
+			for (int y = 0; y <= Main.MAX_Y; y++){
+				for (int z = 0; z < 16; z++){
+					visited[x][y][z] = World.NOT_VISITED;
 				}
 			}
 		}
@@ -51,38 +63,5 @@ public class Chunk {
 				}
 			}
 		}
-		// Optimize to remove blocks that are completely surrounded
-		/*byte[][][] newBlockTypeList = blockType.clone();
-		for (int x = 1; x < 15; x++){
-			for (int y = 1; y < 64; y++){
-				for (int z = 1; z < 15; z++){
-					if (blockType[x+1][y][z] != 0 && blockType[x-1][y][z] != 0 &&
-					    blockType[x][y+1][z] != 0 && blockType[x][y-1][z] != 0 &&
-					    blockType[x][y][z+1] != 0 && blockType[x][y][z-1] != 0){
-						newBlockTypeList[x][y][z] = 0;
-					}
-						
-				}
-			}
-		}
-		blockType = newBlockTypeList;*/
 	}
-	
-	public String getPOVString() {
-		String str = "";
-		for (int x = 0; x < 16; x++) {
-			//System.out.printf("X: %d\n", x);
-			for (int y = 0; y < 256; y++){
-				for (int z = 0; z < 16; z++){
-					BlockType type = blockType[x][y][z];
-					if (type != BlockType.AIR)
-						str = str.concat(String.format("object { blocks[%d] translate <%d, %d, %d> }\n", type, x, y, z));
-				}
-			}
-		}
-		return str;
-	}
-	
-
-
 }

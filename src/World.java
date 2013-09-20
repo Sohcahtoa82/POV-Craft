@@ -6,9 +6,9 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class World {
-	private static final byte NOT_VISITED = 0;
-	private static final byte QUEUED = 1;
-	private static final byte VISITED = 2;	
+	public static final byte NOT_VISITED = 0;
+	public static final byte QUEUED = 1;
+	public static final byte VISITED = 2;	
 	
 	enum Direction {
 		TOP("Top", "object{ Face scale <%d,1,1> pigment { image_map {png \"%s\"}} rotate 90*x translate <%d, %d + 1, %d> }\n"),
@@ -28,8 +28,11 @@ public class World {
 	
 	ArrayList<Region> regions = new ArrayList<Region>();
 	private LinkedList<Point3D> queue = new LinkedList<Point3D>();
+	private Chunk chunks[][];
+	private int offsetX = Integer.MAX_VALUE, offsetZ = Integer.MAX_VALUE;
 	
 	public void loadRegionDirectory(String dir) throws Exception{
+		ArrayList<Chunk> chunkslist = new ArrayList<Chunk>();
 		String[] files = (new File(dir)).list(new FilenameFilter(){
 			@Override
 			public boolean accept(File file, String filename) {
@@ -41,9 +44,29 @@ public class World {
 			System.out.printf("Loading %s\n", files[i]);
 			Region region = new Region();
 			region.readRegionFile(dir.concat(files[i]));
-			regions.add(region);
+			for(int x = 0; x < 32; x++){
+				for (int z = 0; z < 32; z++){
+					if(region.chunk[x][z] != null){
+						chunkslist.add(region.chunk[x][z]);
+					}
+				}
+			}
 		}
-		System.out.println("Done loading regions");
+		System.out.println("Done loading regions, setting up chunks...");
+		int maxx = Integer.MIN_VALUE, maxz = Integer.MIN_VALUE;
+		for (Chunk chunk : chunkslist){
+			offsetX = Math.min(offsetX, chunk.posX);
+			offsetZ = Math.min(offsetZ, chunk.posZ);
+			maxx = Math.max(maxx, chunk.posX);
+			maxz = Math.max(maxz, chunk.posZ);
+		}
+		chunks = new Chunk[maxx - offsetX + 1][maxz - offsetZ + 1];
+		offsetX = -offsetX;
+		offsetZ = -offsetZ;
+		for (Chunk chunk : chunkslist){
+			chunks[chunk.posX + offsetX][offsetZ + chunk.posZ] = chunk;
+		}
+		System.out.println("Done");
 	}
 	
 	public void writePOVString(PrintWriterGroup pw) {
@@ -53,8 +76,6 @@ public class World {
 		blocksWritten = writeWaterBlocks(pw);
 		System.out.printf("Water blocks: %d\n", blocksWritten);
 		totalBlocks += blocksWritten;
-		
-		//public int writeFaces(PrintWriterGroup pw, int adjX, int adjY, int adjZ, int runX, int runY, int runZ, Direction direction) {
 		
 		blocksWritten = writeFaces(pw, 0, 1, 0, 1, 0, Direction.TOP); //writeTopFaces(pw);
 		System.out.printf("Top faces: %d\n", blocksWritten);
@@ -84,8 +105,12 @@ public class World {
 	}
 	
 	private void resetVisitedArrays(){
-		for (Region region : regions){
-			region.visited = new byte[512][256][512];
+		for (Chunk[] chunklist : chunks){
+			for (Chunk chunk : chunklist){
+				if (chunk != null){
+					chunk.resetVisited();
+				}
+			}
 		}
 	}
 	
@@ -209,45 +234,23 @@ public class World {
 		return blocksWritten;
 	}
 	
-	public BlockType getBlockType(int x, int y, int z){		
-		Region region = getContainingRegion(x, z);
-		if (region == null || y > Main.MAX_Y)
-			return null;
-		
-		int chunkX = (int)Math.floor(x / 16.0);
-		int chunkZ = (int)Math.floor(z / 16.0);
-		chunkX = chunkX - (region.posX * 32);
-		chunkZ = chunkZ - (region.posZ * 32);
-		
-		if (x < 0)
-			x = x % 16 + 16;
-		if (z < 0)
-			z = z % 16 + 16;
-		
-		if (region.chunk[chunkX][chunkZ] != null){
-			return region.chunk[chunkX][chunkZ].blockType[x%16][y][z%16];
-		} else {
+	public Chunk getContainingChunk(int x, int z){
+		return getChunk(x >> 4, z >> 4);
+	}
+	
+	public Chunk getChunk(int x, int z){
+		try {
+			return chunks[x + offsetX][z + offsetZ];
+		} catch (ArrayIndexOutOfBoundsException e){
 			return null;
 		}
 	}
 	
-	private Region getContainingRegion(int x, int z){
-		int regionX = x / 512;
-		int regionZ = z / 512;
-		
-		if (x < 0)
-			regionX--;
-		if (z < 0)
-			regionZ--;
-		return getRegion(regionX, regionZ);
-	}
-	
-	private Region getRegion(int x, int z){
-		for (Region region : regions){
-			if (region.posX == x && region.posZ == z)
-				return region;
-		}
-		return null;
+	public BlockType getBlockType(int x, int y, int z){
+		Chunk chunk = getContainingChunk(x, z);
+		if (chunk == null || y > Main.MAX_Y)
+			return null;
+		return chunk.blockType[x & 0xF][y][z & 0xF];
 	}
 	
 	public void addWaterBlock(PrintWriter pw, int x, int y, int z){
@@ -337,16 +340,17 @@ public class World {
 	}
 	
 	private int getVisited(int x, int y, int z){
-		Region region = getContainingRegion(x, z);
-		if (region == null || y > Main.MAX_Y)
+		Chunk chunk = getContainingChunk(x, z);
+		if (chunk == null || y > Main.MAX_Y)
 			return VISITED;
-		return region.visited[Math.abs(x % 512)][y][Math.abs(z % 512)];
+		return chunk.visited[x & 0xF][y][z & 0xF];
 	}
 	
 	private void setVisited(int x, int y, int z, byte visited){
-		Region region = getContainingRegion(x, z);
-		if (region != null || y > Main.MAX_Y)
-			region.visited[Math.abs(x % 512)][y][Math.abs(z % 512)] = visited;
+		Chunk chunk = getContainingChunk(x, z);
+		if (chunk == null || y > Main.MAX_Y)
+			return;
+		chunk.visited[x & 0xF][y][z & 0xF] = visited;
 	}
 	
 	public String getNorthSouthTexture(BlockType type){

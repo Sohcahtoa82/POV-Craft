@@ -13,8 +13,6 @@ public class Region {
 	public int posZ;
 	public int numChunks = 0;
 	
-	public byte[][][] visited = new byte[512][256][512];
-	
 	public void readRegionFile(String fileName) throws Exception{
 		int offset, sectorCount, readInt;
 		//InputStream fileStream = new FileInputStream(fileName);
